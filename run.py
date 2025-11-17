@@ -1,5 +1,5 @@
 from ultralytics import YOLO
-from utils import *
+from utils.data import *
 
 
 if __name__ == "__main__":

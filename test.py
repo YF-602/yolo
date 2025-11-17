@@ -1,6 +1,7 @@
 from ultralytics import YOLO
-from cal import *
+from utils.test import *
 from utils import *
+
 
 # 加载预训练模型
 model = YOLO('yolo11n.pt')

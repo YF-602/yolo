@@ -1,13 +1,11 @@
-from ultralytics import YOLO
+from pathlib import Path
 import os
-import shutil
 
 
 def get_cls(cls):
     if(cls == 0): return [1, 'person']
     elif(cls == 1): return [2, 'bicycle']
     else: return [0, 'car']
-
 
 def save_detection_results(results, output_dir='./output'):
     """保存检测结果：图像和标签文件"""
@@ -67,3 +65,31 @@ def save_detection_results(results, output_dir='./output'):
     print(f"📁 标签文件: {labels_dir}")
     
     return all_boxes
+
+def read_label_files(labels_dir):
+    """读取标签文件"""
+    labels = {}
+    for label_file in Path(labels_dir).glob('*.txt'):
+        with open(label_file, 'r') as f:
+            lines = f.readlines()
+        boxes = []
+        for line in lines:
+            parts = line.strip().split()
+            if len(parts) == 5:
+                cls_id = int(parts[0])
+                coords = [float(x) for x in parts[1:]]
+                boxes.append((cls_id, coords))
+        labels[label_file.stem] = boxes
+    return labels
+# e.g.
+# {
+#     '000016': [(2, [0.598802, 0.539, 0.592814, 0.798])], 
+#     '000021': [(1, [0.346726, 0.259, 0.33631, 0.222]), 
+#                (1, [0.266369, 0.601, 0.425595, 0.454]), 
+#                (1, [0.81994, 0.513, 0.342262, 0.882])], 
+#     '000023': [(1, [0.471557, 0.455, 0.583832, 0.906]), 
+#                (2, [0.387725, 0.737, 0.757485, 0.526]), 
+#                (1, [0.892216, 0.222, 0.215569, 0.396]), 
+#                (1, [0.080838, 0.105, 0.155689, 0.206]), 
+#                (2, [0.892216, 0.71, 0.215569, 0.532])], 
+# }
