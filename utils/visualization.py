@@ -127,16 +127,23 @@ def generate_pr_curves(class_tp_fp, class_gt_count, class_names, output_dir):
         if not tp_fp_list:
             continue
             
-        # 按置信度排序
+        # 按置信度(iou代替)排序
+        
+        print("raw:", tp_fp_list)
+
         tp_fp_list.sort(key=lambda x: x[1], reverse=True)
+
+        print("pro:", tp_fp_list)
         
         tp_cumsum = np.cumsum([tp for tp, _ in tp_fp_list])
         fp_cumsum = np.cumsum([1 - tp for tp, _ in tp_fp_list])
         
         precisions = tp_cumsum / (tp_cumsum + fp_cumsum + 1e-6)
         recalls = tp_cumsum / (class_gt_count[cls_id] + 1e-6)
+
+        print("precisions:", precisions)
         
-        # 确保曲线从(0,0)开始
+        # 确保曲线从(0,1)开始，到(1,0)结束
         recalls = np.concatenate(([0], recalls, [1]))
         precisions = np.concatenate(([1], precisions, [0]))
         

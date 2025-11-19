@@ -21,6 +21,8 @@ def evaluate_detection(
     class_tp_fp = calculate_class_tp_fp(gt_labels, pred_labels, threshold)
     class_gt_count = calculate_class_gt_count(gt_labels)
 
+    # print("class_tp_fp:", class_tp_fp)
+
     # 生成图表
     generate_complete_confusion_matrix(
         gt_labels, pred_labels, threshold, class_names, output_dir)

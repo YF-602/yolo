@@ -7,7 +7,7 @@ def calculate_class_tp_fp(gt_labels, pred_labels, threshold):
     class_names = ['car', 'person', 'bicycle']
     num_classes = len(class_names)
     
-    # 为每个类别存储TP/FP信息
+    # 为每个类别存储TP/FP信息(is_tp, confidence)
     class_tp_fp = {i: [] for i in range(num_classes)}
     # e.g.
     # {
@@ -29,7 +29,7 @@ def calculate_class_tp_fp(gt_labels, pred_labels, threshold):
             best_iou = 0
             best_gt_idx = -1
             
-            for gt_idx, (_, gt_coords) in enumerate(gt_boxes):
+            for gt_idx, (gt_cls, gt_coords) in enumerate(gt_boxes):
                 if gt_idx in used_gt:
                     continue
                 
