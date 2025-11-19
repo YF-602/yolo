@@ -95,7 +95,6 @@ def calculate_map50_map5095(class_tp_fp, class_gt_count, class_names):
         tp_fp_list.sort(key=lambda x: x[1], reverse=True)
         
         # 计算不同IoU阈值下的AP
-        thresholds_50 = [0.5]
         thresholds_50_95 = np.arange(0.5, 1.0, 0.05)
         
         ap_50 = calculate_ap_for_threshold(tp_fp_list, class_gt_count[cls_id], 0.5)

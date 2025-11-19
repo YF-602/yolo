@@ -1,5 +1,5 @@
 from ultralytics import YOLO
-from utils.test import *
+from tests.test import *
 from utils import *
 
 
