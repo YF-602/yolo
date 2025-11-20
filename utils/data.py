@@ -42,7 +42,7 @@ def save_detection_results(results, output_dir='./output'):
                     target_cls, cls_name = get_cls(coco_cls)
                     confidence = result.boxes.conf[j].item()
                     
-                    # 写入标签文件：目标类别 中心点x 中心点y 框宽 框高
+                    # 写入标签文件：目标类别 中心点x 中心点y 框宽 框高 置信度conf
                     f.write(f"{target_cls} {center_x:.6f} {center_y:.6f} {width:.6f} {height:.6f} {confidence:.6f}\n")
                     
                     # 保存用于计算mAP的信息
