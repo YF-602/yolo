@@ -13,9 +13,9 @@ class TestEvaluation:
         output_dir = './evaluation_results'
         
         class_names = ['car', 'person', 'bicycle']
-        threshold = 0.5
+        iou_threshold = 0.5
 
-        mAP50, mAP50_95 = evaluate_detection(gt_dir, pred_dir, class_names, threshold, output_dir)
+        mAP50, mAP50_95 = evaluate_detection(gt_dir, pred_dir, class_names, iou_threshold, output_dir)
         
         # 断言结果在合理范围内
         assert 0 <= mAP50 <= 1

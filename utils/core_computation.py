@@ -33,11 +33,20 @@ def calculate_iou(box1, box2):
     
     return inter_area / union_area if union_area > 0 else 0
 
-def calculate_ap(recalls, precisions):
+def calculate_ap(tp_conf_list, class_gt_count):
     """
     计算AP (Average Precision)
     PR曲线下的面积, 越接近1越好
-    """
+    """  
+    # 按置信度排序
+    # tp_conf_list.sort(key=lambda x: x[1], reverse=True)
+
+    tp_cumsum = np.cumsum([tp for tp, _ in tp_conf_list])
+    fp_cumsum = np.cumsum([1 - tp for tp, _ in tp_conf_list])
+    
+    precisions = tp_cumsum / (tp_cumsum + fp_cumsum + 1e-6)
+    recalls = tp_cumsum / (class_gt_count + 1e-6)
+
     # 将recall从0到1进行插值
     mrec = np.concatenate(([0.], recalls, [1.]))
     mpre = np.concatenate(([0.], precisions, [0.]))
@@ -51,23 +60,3 @@ def calculate_ap(recalls, precisions):
     ap = np.sum((mrec[indices + 1] - mrec[indices]) * mpre[indices + 1])
     
     return ap
-
-def calculate_ap_for_threshold(tp_fp_list, gt_count, iou_threshold):
-    """计算特定IoU阈值下的AP"""
-    if gt_count == 0:
-        return 0
-    
-    # 过滤出满足IoU阈值的检测
-    valid_detections = [(tp, iou) for tp, iou in tp_fp_list if iou >= iou_threshold]
-    
-    if not valid_detections:
-        return 0
-    
-    # 计算precision-recall曲线
-    tp_cumsum = np.cumsum([tp for tp, _ in valid_detections])
-    fp_cumsum = np.cumsum([1 - tp for tp, _ in valid_detections])
-    
-    precisions = tp_cumsum / (tp_cumsum + fp_cumsum + 1e-6)
-    recalls = tp_cumsum / (gt_count + 1e-6)
-    
-    return calculate_ap(recalls, precisions)

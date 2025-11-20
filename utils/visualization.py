@@ -7,7 +7,7 @@ import seaborn as sns
 from .core_computation import *
 
 
-def generate_complete_confusion_matrix(gt_labels_dict, pred_labels_dict, threshold, class_names, output_dir):
+def generate_complete_confusion_matrix(gt_labels_dict, pred_labels_dict, iou_threshold, class_names, output_dir):
     """生成完整的目标检测混淆矩阵（兼容字典格式）"""
     
     # 扩展类别名称，加入背景
@@ -30,7 +30,7 @@ def generate_complete_confusion_matrix(gt_labels_dict, pred_labels_dict, thresho
         
         # 第一步：处理匹配的检测 (TP和分类错误)
         for i, pred_box in enumerate(pred_boxes):
-            pred_cls, pred_coords = pred_box  # 解包 (class_id, [cx, cy, w, h])
+            pred_cls, pred_coords, conf = pred_box  # 解包 (class_id, [cx, cy, w, h], conf)
             pred_class = pred_cls + 1  # +1因为0是背景
             
             best_iou = 0
@@ -45,7 +45,7 @@ def generate_complete_confusion_matrix(gt_labels_dict, pred_labels_dict, thresho
                     best_iou = iou
                     best_gt_idx = j
             
-            if best_gt_idx != -1 and best_iou >= threshold:
+            if best_gt_idx != -1 and best_iou >= iou_threshold:
                 # 有匹配的真实框
                 gt_cls, _ = gt_boxes[best_gt_idx]
                 gt_class = gt_cls + 1
@@ -115,37 +115,29 @@ def generate_confusion_matrix_plots(cm, class_names, output_dir):
                     dpi=300, bbox_inches='tight')
         plt.close()
 
-# TODO 生成的曲线形态貌似有点问题
-def generate_pr_curves(class_tp_fp, class_gt_count, class_names, output_dir):
+def generate_pr_curves(class_tp_conf, class_gt_count, class_names, output_dir):
     """生成PR曲线、P曲线、R曲线"""
     
     # PR曲线
     plt.figure(figsize=(10, 8))
     
     for cls_id in range(len(class_names)):
-        tp_fp_list = class_tp_fp[cls_id]
-        if not tp_fp_list:
+        tp_conf_list = class_tp_conf[cls_id]
+        if not tp_conf_list:
             continue
             
-        # 按置信度(iou代替)排序
-        
-        print("raw:", tp_fp_list)
+        # 按置信度排序
+        tp_conf_list.sort(key=lambda x: x[1], reverse=True)
 
-        tp_fp_list.sort(key=lambda x: x[1], reverse=True)
-
-        print("pro:", tp_fp_list)
-        
-        tp_cumsum = np.cumsum([tp for tp, _ in tp_fp_list])
-        fp_cumsum = np.cumsum([1 - tp for tp, _ in tp_fp_list])
+        tp_cumsum = np.cumsum([tp for tp, _ in tp_conf_list])
+        fp_cumsum = np.cumsum([1 - tp for tp, _ in tp_conf_list])
         
         precisions = tp_cumsum / (tp_cumsum + fp_cumsum + 1e-6)
         recalls = tp_cumsum / (class_gt_count[cls_id] + 1e-6)
 
-        print("precisions:", precisions)
-        
-        # 确保曲线从(0,1)开始，到(1,0)结束
+        # 确保曲线端点
         recalls = np.concatenate(([0], recalls, [1]))
-        precisions = np.concatenate(([1], precisions, [0]))
+        precisions = np.concatenate(([0], precisions, [0]))
         
         plt.plot(recalls, precisions, label=f'{class_names[cls_id]}', linewidth=2)
     
@@ -159,27 +151,27 @@ def generate_pr_curves(class_tp_fp, class_gt_count, class_names, output_dir):
     plt.close()
     
     # P曲线和R曲线
-    thresholds = np.linspace(0, 1, 100)
+    conf_thresholds = np.linspace(0, 1, 100)
     
     plt.figure(figsize=(12, 5))
     
     # P曲线
     plt.subplot(1, 2, 1)
     for cls_id in range(len(class_names)):
-        tp_fp_list = class_tp_fp[cls_id]
-        if not tp_fp_list:
+        tp_conf_list = class_tp_conf[cls_id]
+        if not tp_conf_list:
             continue
             
         precisions = []
-        for threshold in thresholds:
-            valid_detections = [tp for tp, iou in tp_fp_list if iou >= threshold]
+        for conf_threshold in conf_thresholds:
+            valid_detections = [tp for tp, conf in tp_conf_list if conf >= conf_threshold]
             if not valid_detections:
                 precisions.append(0)
                 continue
             precision = sum(valid_detections) / len(valid_detections)
             precisions.append(precision)
-        
-        plt.plot(thresholds, precisions, label=f'{class_names[cls_id]}', linewidth=2)
+
+        plt.plot(conf_thresholds, precisions, label=f'{class_names[cls_id]}', linewidth=2)
     
     plt.xlabel('Confidence Threshold')
     plt.ylabel('Precision')
@@ -190,17 +182,17 @@ def generate_pr_curves(class_tp_fp, class_gt_count, class_names, output_dir):
     # R曲线
     plt.subplot(1, 2, 2)
     for cls_id in range(len(class_names)):
-        tp_fp_list = class_tp_fp[cls_id]
-        if not tp_fp_list:
+        tp_conf_list = class_tp_conf[cls_id]
+        if not tp_conf_list:
             continue
             
         recalls = []
-        for threshold in thresholds:
-            valid_tp = sum(tp for tp, iou in tp_fp_list if iou >= threshold)
+        for conf_threshold in conf_thresholds:
+            valid_tp = sum(tp for tp, conf in tp_conf_list if conf >= conf_threshold)
             recall = valid_tp / (class_gt_count[cls_id] + 1e-6)
             recalls.append(recall)
         
-        plt.plot(thresholds, recalls, label=f'{class_names[cls_id]}', linewidth=2)
+        plt.plot(conf_thresholds, recalls, label=f'{class_names[cls_id]}', linewidth=2)
     
     plt.xlabel('Confidence Threshold')
     plt.ylabel('Recall')
@@ -212,35 +204,33 @@ def generate_pr_curves(class_tp_fp, class_gt_count, class_names, output_dir):
     plt.savefig(os.path.join(output_dir, 'P_R_curves.png'), dpi=300, bbox_inches='tight')
     plt.close()
 
-def generate_f1_curve(class_tp_fp, class_gt_count, class_names, output_dir):
+def generate_f1_curve(class_tp_conf, class_gt_count, class_names, output_dir):
     """生成F1曲线"""
     
-    thresholds = np.linspace(0, 1, 100)
+    conf_thresholds = np.linspace(0, 1, 100)
     
     plt.figure(figsize=(10, 6))
     
     for cls_id in range(len(class_names)):
-        tp_fp_list = class_tp_fp[cls_id]
-        if not tp_fp_list:
+        tp_conf_list = class_tp_conf[cls_id]
+        if not tp_conf_list:
             continue
             
         f1_scores = []
-        for threshold in thresholds:
-            valid_detections = [(tp, iou) for tp, iou in tp_fp_list if iou >= threshold]
+        for conf_threshold in conf_thresholds:
+            valid_detections = [(tp, conf) for tp, conf in tp_conf_list if conf >= conf_threshold]
             if not valid_detections:
                 f1_scores.append(0)
                 continue
                 
             tp_count = sum(tp for tp, _ in valid_detections)
-            fp_count = len(valid_detections) - tp_count
-            fn_count = class_gt_count[cls_id] - tp_count
             
-            precision = tp_count / (tp_count + fp_count + 1e-6)
-            recall = tp_count / (tp_count + fn_count + 1e-6)
+            precision = tp_count / (len(valid_detections))
+            recall = tp_count / (class_gt_count[cls_id] + 1e-6)
             f1 = 2 * precision * recall / (precision + recall + 1e-6)
             f1_scores.append(f1)
         
-        plt.plot(thresholds, f1_scores, label=f'{class_names[cls_id]}', linewidth=2)
+        plt.plot(conf_thresholds, f1_scores, label=f'{class_names[cls_id]}', linewidth=2)
     
     plt.xlabel('Confidence Threshold')
     plt.ylabel('F1 Score')

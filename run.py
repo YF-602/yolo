@@ -1,5 +1,17 @@
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # 添加这行在文件开头
+
 from ultralytics import YOLO
 from utils.data import *
+from utils import *
+
+
+gt_dir = './datasets/labels/test'
+pred_dir = './output/labels/test'
+output_dir = './evaluation_results'
+        
+class_names = ['car', 'person', 'bicycle']
+iou_threshold = 0.3
 
 
 if __name__ == "__main__":
@@ -11,11 +23,11 @@ if __name__ == "__main__":
     results = model.predict(
         source='./datasets/images/test', 
         classes=[0, 1, 2],          # 只检测人、自行车、汽车
-        conf=0.50,                  # 置信度阈值
+        conf=0.5,                  # 置信度阈值
         # save=True,                  # 保存结果图像
-        # save_txt=True,              # 保存标签文件
+        #save_txt=True,              # 保存标签文件
         # save_conf=True,             # 在标签中保存置信度
-        # exist_ok=True               # 覆盖已存在的结果
+        # exist_ok=True,              # 覆盖已存在的结果
     )
     
     # 2. 保存自定义格式的结果
@@ -34,6 +46,8 @@ if __name__ == "__main__":
     # PR_curve.png（PR曲线）
     # F1_curve.png（F1曲线）
     # val_batch0_labels与val_batch0_pred
+
+    mAP50, mAP50_95 = evaluate_detection(gt_dir, pred_dir, class_names, iou_threshold, output_dir)
     
     # 4. 显示检测统计信息
     print(f"\n📈 检测统计:")
@@ -47,5 +61,7 @@ if __name__ == "__main__":
     
     print(f"总检测数量: {total_detections}")
     print(f"各类别检测数量: {class_counts}")
+    print(f"mAP50: {mAP50}")
+    print(f"mAP50_95: {mAP50_95}")
     
     print("\n✅ 任务完成！")

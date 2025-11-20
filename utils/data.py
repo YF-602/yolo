@@ -43,7 +43,7 @@ def save_detection_results(results, output_dir='./output'):
                     confidence = result.boxes.conf[j].item()
                     
                     # 写入标签文件：目标类别 中心点x 中心点y 框宽 框高
-                    f.write(f"{target_cls} {center_x:.6f} {center_y:.6f} {width:.6f} {height:.6f}\n")
+                    f.write(f"{target_cls} {center_x:.6f} {center_y:.6f} {width:.6f} {height:.6f} {confidence:.6f}\n")
                     
                     # 保存用于计算mAP的信息
                     boxes_info.append({
@@ -79,9 +79,17 @@ def read_label_files(labels_dir):
                 cls_id = int(parts[0])
                 coords = [float(x) for x in parts[1:]]
                 boxes.append((cls_id, coords))
+            elif len(parts) == 6:
+                cls_id = int(parts[0])
+                coords = [float(x) for x in parts[1:5]]
+                conf = float(parts[5])
+                boxes.append((cls_id, coords, conf))
+            else:
+                print(f"警告: 文件 {label_file} 中跳过格式错误的行: {line}")
         labels[label_file.stem] = boxes
     return labels
 # e.g.
+# gt_labels:
 # {
 #     '000016': [(2, [0.598802, 0.539, 0.592814, 0.798])], 
 #     '000021': [(1, [0.346726, 0.259, 0.33631, 0.222]), 
@@ -93,3 +101,17 @@ def read_label_files(labels_dir):
 #                (1, [0.080838, 0.105, 0.155689, 0.206]), 
 #                (2, [0.892216, 0.71, 0.215569, 0.532])], 
 # }
+#
+# pred_labels:
+# {
+#     '000016': [(2, [0.598802, 0.539, 0.592814, 0.798], 0.98)], 
+#     '000021': [(1, [0.346726, 0.259, 0.33631, 0.222], 0.98), 
+#                (1, [0.266369, 0.601, 0.425595, 0.454], 0.98), 
+#                (1, [0.81994, 0.513, 0.342262, 0.882], 0.98)], 
+#     '000023': [(1, [0.471557, 0.455, 0.583832, 0.906], 0.98), 
+#                (2, [0.387725, 0.737, 0.757485, 0.526], 0.98), 
+#                (1, [0.892216, 0.222, 0.215569, 0.396], 0.98), 
+#                (1, [0.080838, 0.105, 0.155689, 0.206], 0.98), 
+#                (2, [0.892216, 0.71, 0.215569, 0.532]), 0.98], 
+# }
+#
